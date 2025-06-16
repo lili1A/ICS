@@ -8,7 +8,7 @@ section .data; program data initialization
            db "3 - Circle (TP075586)", 10
            db "4 - Square", 10
            db "5 - Triangle", 10
-           db "6 - Oval", 10
+           db "6 - Exit", 10
            db "Enter your choice (Program reads only 1st input character!): ", 0
     prompt_len equ $ - prompt
 
@@ -69,7 +69,8 @@ main_loop:
     cmp al, '5'; compare with 5
     je draw_triangle; if equal, jump to draw_triangle
     cmp al, '6'; compare with 6
-    je draw_oval; if equal, jump to draw_oval
+    je program_done; if equal, jump to draw_triangle
+    
 
     ; invalid input
     mov eax, 4
@@ -77,82 +78,88 @@ main_loop:
     mov ecx, invalid_msg
     mov edx, invalid_len
     int 0x80
-    jmp main_loop
+    jmp main_loop; jump back to the main loop in case of invalid input
 
 draw_line:
 
 draw_rectangle:
 
 draw_circle:
-    ; Draw a circle using midpoint circle algorithm approximation
+    ; circle is drawn by initializing y coordinate (- rad to + rad)
     mov ecx, circle_radius
-    neg ecx
+    neg ecx; - radius (y)
+    
 circle_y_loop:
-    push ecx
+; looping y coordinate
+    push ecx; saving y coordinate
     mov ecx, circle_radius
     neg ecx
 circle_x_loop:
     push ecx
     
-    ; Calculate x² + y²
-    mov eax, ecx
-    imul eax, eax        ; x²
-    mov ebx, [esp+4]     ; y value
+    ; circle equation: x² + y²
+    mov eax, ecx; eax = x 
+    imul eax, eax        ; eax = x²
+    mov ebx, [esp+4]     ; y value, ebx = y from stack
     imul ebx, ebx        ; y²
-    add eax, ebx         ; x² + y²
+    add eax, ebx         ; x² + y², sum of squares
     
-    ; Compare with r² (approximate)
+    ; compare with adjusted r² 
     mov ebx, circle_radius
-    imul ebx, ebx
-    sub ebx, circle_radius  ; Adjust for ASCII art
+    imul ebx, ebx; ebx = r²
+    sub ebx, circle_radius  ; adjusting ASCII 
     
+    ; printinh circle
     cmp eax, ebx
-    jg circle_space
+    jg circle_space; if x²+y² > r², draw space
     
-    ; Draw circle pixel
+    ; draw circle pixel (inside circle)
     mov eax, 4
     mov ebx, 1
-    mov ecx, fill_char
-    mov edx, 1
+    mov ecx, fill_char; *
+    mov edx, 1; length is 1
     int 0x80
     jmp circle_next
     
+; draw outside the circle (" ")
 circle_space:
     mov eax, 4
     mov ebx, 1
-    mov ecx, space_char
+    mov ecx, space_char; (" ")
     mov edx, 1
     int 0x80
     
+; controlling the loop   
 circle_next:
-    pop ecx
-    inc ecx
+    pop ecx; restore x coordinate
+    inc ecx; x++
     cmp ecx, circle_radius
-    jle circle_x_loop
+    jle circle_x_loop; continue until x > radius
     
+    ; \n at the end of each row 
     call print_newline
-    pop ecx
-    inc ecx
+    pop ecx; restoring y coordinate 
+    inc ecx; y++
     cmp ecx, circle_radius
-    jle circle_y_loop
-    jmp program_done
+    jle circle_y_loop; continue until y > radius
+    jmp program_done; exit drawing
 
 draw_square:
     
 draw_triangle:
  
-draw_oval:
-
 print_newline:
+    ; saving registers
     push eax
     push ebx
     push ecx
     push edx
     mov eax, 4
     mov ebx, 1
-    mov ecx, newline
-    mov edx, 1
+    mov ecx, newline; \n
+    mov edx, 1; length 1
     int 0x80
+    ; restoring registers 
     pop edx
     pop ecx
     pop ebx
@@ -160,17 +167,17 @@ print_newline:
     ret
 
 program_done:
-    ; Finish message
+    ; finish message
     mov eax, 4
     mov ebx, 1
     mov ecx, finish_msg
     mov edx, finish_len
     int 0x80
 
-    ; Exit the program
+    ; exit the program
     mov eax, 1; syscall exit 
     xor ebx, ebx; exit code 0
-    int 0x80
+    int 0x80; call kernel
 
 section .data
     newline db 10
