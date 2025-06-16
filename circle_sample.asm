@@ -1,106 +1,176 @@
-section .data; read-only data initialization 
-    prompt db "Choose a shape: 1 - Circle, 2 - Square", 10
-    prompt_len equ $ - prompt; equ calculates the length of 'prompt'
+section .data; program data initialization 
+    welcome_msg db "Welcome to the ICS assignment program of the group 15", 10; 10 - ASCII for \n - moves the cursor to the next line when printing 
+    welcome_len equ $ - welcome_msg; equ - defines a constant value, $ - current address in memory
+    ; user prompts
+    prompt db "Choose a shape:", 10
+           db "1 - Line", 10
+           db "2 - Rectangle", 10
+           db "3 - Circle (TP075586)", 10
+           db "4 - Square", 10
+           db "5 - Triangle", 10
+           db "6 - Oval", 10
+           db "Enter your choice (Program reads only 1st input character!): ", 0
+    prompt_len equ $ - prompt
 
-    newline db 10; 10 - ASCII value foe \n
+    invalid_msg db "Invalid input! Try again!", 10, 0
+    invalid_len equ $ - invalid_msg
 
-    ; lines for circle
-    circle1     db "   ***   ", 10
-    circle2     db " *     * ", 10
-    circle3     db "*       *", 10
-    circle4     db "*       *", 10
-    circle5     db " *     * ", 10
-    circle6     db "   ***   ", 10
+    finish_msg db "Program is finished!", 10, 0
+    finish_len equ $ - finish_msg
 
-    ; lines for square 
-    square1     db "*********", 10
-    square2     db "*       *", 10
-    square3     db "*       *", 10
-    square4     db "*       *", 10
-    square5     db "*********", 10
+    ; shape characters
+    fill_char db 42; ASCII code for "*" - shape filling character 
+    space_char db 32; ASCII code for space - spacing 
 
-    finish_msg  db "Program is finished!"
-    finish_len  equ $ - finish_msg
+    ; circle parameters
+    circle_radius equ 15; defines a circle's radius: 15 units 
+    
+    ; WRITE YOUR SHAPE PARAMETERS BELOW
 
-section .bss; block starting symbol - section for uninitialized global&static variables in memory 
-    input_buffer resb 100; 100 bytes are reserved for user input - made for loop debugging 
+section .bss; declares initialized variables, reserves space in memory 
+    input_buffer resb 10; program reserves 10 bytes (characters) for input
 
-section .text; program logic 
-    global _start; program entry point 
+section .text; main instructions sety 
+    global _start; begin execution 
 
 _start:
-; print user promt message 
-prompt_user:
-    mov eax, 4; syscall for write
-    mov ebx, 1; file descriptor stdout 
-    mov ecx, prompt; msg address 
-    mov edx, prompt_len
-    int 0x80; execute
-
-    ; read up to 100 bytes from prompt_user
-    mov eax, 3; syscall read 
-    mov ebx, 0; file descriptor stdin
-    mov ecx, input_buffer; where input is stored 
-    mov edx, 100; max bytes num to read from input 
-    int 0x80
-
-    ; check the first character only
-    mov al, [input_buffer]; load first char only from input 
-    cmp al, '1'; if 1 
-    je draw_circle; then jump to draw_circle
-    cmp al, '2'; if 2
-    je draw_square; then jump to draw_square
-
-    ; invalid input => prompt again (1 iteration only)
-    jmp prompt_user
-
-; circle function
-draw_circle:
-    mov ecx, circle1
-    call print_line
-    mov ecx, circle2
-    call print_line
-    mov ecx, circle3
-    call print_line
-    mov ecx, circle4
-    call print_line
-    mov ecx, circle5
-    call print_line
-    mov ecx, circle6
-    call print_line
-    jmp program_done
+    ; welcome message print 
+    mov eax, 4; syscall write 
+    mov ebx, 1; file descriptor stdout - standart output 
+    mov ecx, welcome_msg; data location pointer 
+    mov edx, welcome_len; number of bytes to wrire 
+    int 0x80; call kernel 
     
-; square function
-draw_square:
-    mov ecx, square1
-    call print_line
-    mov ecx, square2
-    call print_line
-    mov ecx, square3
-    call print_line
-    mov ecx, square4
-    call print_line
-    mov ecx, square5
-    call print_line
-    jmp program_done
-
-; print lines 
-print_line:
+main_loop:
+    ; main loop for prompt 
     mov eax, 4
     mov ebx, 1
-    mov edx, 10   ; each line is 9 chars + newline
+    mov ecx, prompt
+    mov edx, prompt_len
     int 0x80
-    ret
+
+    ; Read input
+    mov eax, 3; syscall number to read 
+    mov ebx, 0; stdin - standart input 
+    mov ecx, input_buffer
+    mov edx, 10; defines how many bytes to read (maximum)
+    int 0x80
+
+    ; Check input
+    mov al, [input_buffer]; move only first character 
+    cmp al, '1'; compare with 1
+    je draw_line; if equal, jump to draw_line
+    cmp al, '2'; compare with 1
+    je draw_rectangle; compare with 2
+    cmp al, '3'; compare with 3
+    je draw_circle; if equal, jump to draw_circle
+    cmp al, '4'; compare with 4
+    je draw_square; if equal, jump to draw_square
+    cmp al, '5'; compare with 5
+    je draw_triangle; if equal, jump to draw_triangle
+    cmp al, '6'; compare with 6
+    je draw_oval; if equal, jump to draw_oval
+
+    ; invalid input
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, invalid_msg
+    mov edx, invalid_len
+    int 0x80
+    jmp main_loop
+
+draw_line:
+
+draw_rectangle:
+
+draw_circle:
+    ; Draw a circle using midpoint circle algorithm approximation
+    mov ecx, circle_radius
+    neg ecx
+circle_y_loop:
+    push ecx
+    mov ecx, circle_radius
+    neg ecx
+circle_x_loop:
+    push ecx
     
-; program finish message 
+    ; Calculate x² + y²
+    mov eax, ecx
+    imul eax, eax        ; x²
+    mov ebx, [esp+4]     ; y value
+    imul ebx, ebx        ; y²
+    add eax, ebx         ; x² + y²
+    
+    ; Compare with r² (approximate)
+    mov ebx, circle_radius
+    imul ebx, ebx
+    sub ebx, circle_radius  ; Adjust for ASCII art
+    
+    cmp eax, ebx
+    jg circle_space
+    
+    ; Draw circle pixel
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, fill_char
+    mov edx, 1
+    int 0x80
+    jmp circle_next
+    
+circle_space:
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, space_char
+    mov edx, 1
+    int 0x80
+    
+circle_next:
+    pop ecx
+    inc ecx
+    cmp ecx, circle_radius
+    jle circle_x_loop
+    
+    call print_newline
+    pop ecx
+    inc ecx
+    cmp ecx, circle_radius
+    jle circle_y_loop
+    jmp program_done
+
+draw_square:
+    
+draw_triangle:
+ 
+draw_oval:
+
+print_newline:
+    push eax
+    push ebx
+    push ecx
+    push edx
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, newline
+    mov edx, 1
+    int 0x80
+    pop edx
+    pop ecx
+    pop ebx
+    pop eax
+    ret
+
 program_done:
+    ; Finish message
     mov eax, 4
     mov ebx, 1
     mov ecx, finish_msg
     mov edx, finish_len
     int 0x80
 
-; exit program
-    mov eax, 1
-    xor ebx, ebx
+    ; Exit the program
+    mov eax, 1; syscall exit 
+    xor ebx, ebx; exit code 0
     int 0x80
+
+section .data
+    newline db 10
