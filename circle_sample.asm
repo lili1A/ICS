@@ -86,16 +86,16 @@ draw_rectangle:
 
 draw_circle:
     ; circle is drawn by initializing y coordinate (- rad to + rad)
-    mov ecx, circle_radius
-    neg ecx; - radius (y)
+    mov ecx, circle_radius; circle rad is loaded into ecx
+    neg ecx; - radius (y), convert to negative, x starts here (left)
     
 circle_y_loop:
 ; looping y coordinate
     push ecx; saving y coordinate
-    mov ecx, circle_radius
+    mov ecx, circle_radius; ecx is reset for x coordinate 
     neg ecx
 circle_x_loop:
-    push ecx
+    push ecx;  saving x coordinate
     
     ; circle equation: x² + y²
     mov eax, ecx; eax = x 
