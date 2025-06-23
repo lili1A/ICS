@@ -26,6 +26,11 @@ section .data; program data initialization
     circle_radius equ 15; defines a circle's radius: 15 units 
     
     ; WRITE YOUR SHAPE PARAMETERS BELOW
+    ; LINE PARAMETERS 
+    line_length equ 40      ;length 
+    line_indent equ 5       ; umof spaces before line starts
+    line_style db '-'   
+    line_style_len equ 1    
 
 section .bss; declares initialized variables, reserves space in memory 
     input_buffer resb 10; program reserves 10 bytes (characters) for input
@@ -81,6 +86,36 @@ main_loop:
     jmp main_loop; jump back to the main loop in case of invalid input
 
 draw_line:
+    ; === Draw indentation ===
+    mov ecx, line_indent    
+    cmp ecx, 0              
+    jle draw_line_main      ; Skip if no indentation needed
+
+draw_spaces:
+    push ecx                ; save counter
+    mov eax, 4              
+    mov ebx, 1              
+    mov ecx, space_char     
+    mov edx, 1          
+    int 0x80                
+    pop ecx                 ; restore counter
+    loop draw_spaces        ; loop until indentation is done
+
+draw_line_main:
+    ; === Draw the actual line ===
+    mov ecx, line_length    
+draw_line_loop:
+    push ecx                ; save counter
+    mov eax, 4             
+    mov ebx, 1             
+    mov ecx, line_style     
+    mov edx, line_style_len 
+    int 0x80                
+    pop ecx                 ; restore counter
+    loop draw_line_loop     ; loop until line is complete
+
+    call print_newline      ; next line
+    jmp main_loop          ; return to menu
 
 draw_rectangle:
 
@@ -142,7 +177,7 @@ circle_next:
     inc ecx; y++
     cmp ecx, circle_radius
     jle circle_y_loop; continue until y > radius
-    jmp program_done; exit drawing
+    jmp main_loop; exit drawing
 
 draw_square:
     
