@@ -3,7 +3,7 @@ section .data; program data initialization
     welcome_len equ $ - welcome_msg; equ - defines a constant value, $ - current address in memory
     ; user prompts
     prompt db "Choose a shape:", 10
-           db "1 - Line", 10
+           db "1 - Line (TP084190)", 10
            db "2 - Rectangle", 10
            db "3 - Circle (TP075586)", 10
            db "4 - Square", 10
