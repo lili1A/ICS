@@ -3,7 +3,7 @@ section .data; program data initialization
     welcome_len equ $ - welcome_msg; equ - defines a constant value, $ - current address in memory
     ; user prompts
     prompt db "Choose a shape:", 10
-           db "1 - Line (TP084190)", 10
+           db "1 - Line", 10
            db "2 - Rectangle", 10
            db "3 - Circle (TP075586)", 10
            db "4 - Square", 10
@@ -23,7 +23,8 @@ section .data; program data initialization
     space_char db 32; ASCII code for space - spacing 
 
     ; circle parameters
-    circle_radius equ 15; defines a circle's radius: 15 units 
+    circle_radius equ 10; defines a circle's radius: 10 units 
+    circle_y_scale equ 2       ; vertical scaling: 2x taller than wide
     
     ; WRITE YOUR SHAPE PARAMETERS BELOW
     ; LINE PARAMETERS 
@@ -120,64 +121,61 @@ draw_line_loop:
 draw_rectangle:
 
 draw_circle:
-    ; circle is drawn by initializing y coordinate (- rad to + rad)
-    mov ecx, circle_radius; circle rad is loaded into ecx
-    neg ecx; - radius (y), convert to negative, x starts here (left)
+    mov ecx, circle_radius
+    neg ecx                   ; start from -radius
     
 circle_y_loop:
-; looping y coordinate
-    push ecx; saving y coordinate
-    mov ecx, circle_radius; ecx is reset for x coordinate 
-    neg ecx
+    push ecx                  ; save y 
+    mov ecx, circle_radius
+    neg ecx                   ; start x from -radius
+    
 circle_x_loop:
-    push ecx;  saving x coordinate
+    push ecx                  ; save x 
     
-    ; circle equation: x² + y²
-    mov eax, ecx; eax = x 
-    imul eax, eax        ; eax = x²
-    mov ebx, [esp+4]     ; y value, ebx = y from stack
-    imul ebx, ebx        ; y²
-    add eax, ebx         ; x² + y², sum of squares
+    mov eax, ecx              ; x
+    imul eax, eax             ; x²
     
-    ; compare with adjusted r² 
+    mov ebx, [esp+4]          ; y
+    imul ebx, ebx             ; y²
+    imul ebx, circle_y_scale  ; y² * scaling factor
+    
+    add eax, ebx              ; x² + (scaled y²)
+    
     mov ebx, circle_radius
-    imul ebx, ebx; ebx = r²
-    sub ebx, circle_radius  ; adjusting ASCII 
+    imul ebx, ebx             ; r²
+    sub ebx, circle_radius    ; adjustment
     
-    ; printinh circle
     cmp eax, ebx
-    jg circle_space; if x²+y² > r², draw space
+    jg circle_space
     
-    ; draw circle pixel (inside circle)
+    ; pixel draw
     mov eax, 4
     mov ebx, 1
-    mov ecx, fill_char; *
-    mov edx, 1; length is 1
+    mov ecx, fill_char
+    mov edx, 1
     int 0x80
     jmp circle_next
     
-; draw outside the circle (" ")
 circle_space:
     mov eax, 4
     mov ebx, 1
-    mov ecx, space_char; (" ")
+    mov ecx, space_char
     mov edx, 1
     int 0x80
     
-; controlling the loop   
 circle_next:
-    pop ecx; restore x coordinate
-    inc ecx; x++
+    pop ecx                   ; restore x
+    inc ecx
     cmp ecx, circle_radius
-    jle circle_x_loop; continue until x > radius
+    jle circle_x_loop
     
-    ; \n at the end of each row 
     call print_newline
-    pop ecx; restoring y coordinate 
-    inc ecx; y++
+    pop ecx                   ; restore y
+    inc ecx
     cmp ecx, circle_radius
-    jle circle_y_loop; continue until y > radius
-    jmp main_loop; exit drawing
+    jle circle_y_loop
+    
+    jmp main_loop
 
 draw_square:
     
