@@ -32,6 +32,10 @@ section .data; program data initialization
     line_style db '-'   
     line_style_len equ 1    
 
+    ; Triangle parameters
+    triangle_height equ 10      ; height of triangle
+    triangle_base equ 19        ; base width 
+
 section .bss; declares initialized variables, reserves space in memory 
     input_buffer resb 10; program reserves 10 bytes (characters) for input
 
@@ -182,6 +186,66 @@ circle_next:
 draw_square:
     
 draw_triangle:
+
+    ; Draw triangle row by row from top to bottom
+    mov ecx, 0              ; row counter (starting from 0)
+    
+triangle_row_loop:
+    push ecx                ; save row counter
+    
+    ; Calculate number of spaces for centering
+    ; spaces = (triangle_base - (2*row + 1)) / 2
+    mov eax, triangle_base  ; load base width
+    mov ebx, ecx            ; current row
+    shl ebx, 1              ; multiply row by 2 (2*row)
+    inc ebx                 ; add 1 (2*row + 1)
+    sub eax, ebx            ; triangle_base - (2*row + 1)
+    shr eax, 1              ; divide by 2 for centering
+    
+    ; Draw leading spaces
+    mov edx, eax            ; number of spaces to draw
+    cmp edx, 0
+    jle triangle_draw_stars ; if no spaces needed, go to stars
+
+triangle_spaces_loop:
+    push edx                ; save space counter
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, space_char
+    mov edx, 1
+    int 0x80
+    pop edx                 ; restore space counter
+    dec edx
+    jnz triangle_spaces_loop
+
+triangle_draw_stars:
+    ; Calculate number of stars for this row: 2*row + 1
+    mov eax, [esp]          ; get current row from stack
+    shl eax, 1              ; multiply by 2
+    inc eax                 ; add 1
+    mov edx, eax            ; number of stars to draw
+
+triangle_stars_loop:
+    push edx                ; save star counter
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, fill_char      ; use '*' character
+    mov edx, 1
+    int 0x80
+    pop edx                 ; restore star counter
+    dec edx
+    jnz triangle_stars_loop
+
+    ; Move to next line
+    call print_newline
+    
+    ; Check if we've drawn all rows
+    pop ecx                 ; restore row counter
+    inc ecx                 ; next row
+    cmp ecx, triangle_height
+    jl triangle_row_loop    ; continue if more rows to draw
+    
+    jmp main_loop           ; return to main menu
  
 print_newline:
     ; saving registers
