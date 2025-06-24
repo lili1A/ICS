@@ -3,11 +3,11 @@ section .data; program data initialization
     welcome_len equ $ - welcome_msg; equ - defines a constant value, $ - current address in memory
     ; user prompts
     prompt db "Choose a shape:", 10
-           db "1 - Line", 10
-           db "2 - Rectangle", 10
-           db "3 - Circle (TP075586)", 10
-           db "4 - Square", 10
-           db "5 - Triangle", 10
+           db "1 - Line (MD ABIR HOSSAIN SHIAM)", 10
+           db "2 - Rectangle (MUNASHE ALFRED DEVE)", 10
+           db "3 - Circle (GUBAEVA LILIIA)", 10
+           db "4 - Oval (GILANG SUHERLAMBANG)", 10
+           db "5 - Triangle (SALMAN FARSI NUDRAAT)", 10
            db "6 - Exit", 10
            db "Enter your choice (Program reads only 1st input character!): ", 0
     prompt_len equ $ - prompt
@@ -23,15 +23,21 @@ section .data; program data initialization
     space_char db 32; ASCII code for space - spacing 
 
     ; circle parameters
-    circle_radius equ 10; defines a circle's radius: 10 units 
-    circle_y_scale equ 2       ; vertical scaling: 2x taller than wide
+    circle_radius equ 12       ; Best for smoothness (8-16)
+    circle_y_scale equ 2       ; Terminal character compensation
+ 
     
-    ; WRITE YOUR SHAPE PARAMETERS BELOW
+    ; SHAPE PARAMETERS 
+    
     ; LINE PARAMETERS 
     line_length equ 40      ;length 
     line_indent equ 5       ; umof spaces before line starts
     line_style db '-'   
     line_style_len equ 1    
+    
+    ; oval parameters
+    oval_width equ 16       ; horizontal "radius" (half width)
+    oval_height equ 8  ; vertical "radius" (half height)
 
 section .bss; declares initialized variables, reserves space in memory 
     input_buffer resb 10; program reserves 10 bytes (characters) for input
@@ -71,7 +77,7 @@ main_loop:
     cmp al, '3'; compare with 3
     je draw_circle; if equal, jump to draw_circle
     cmp al, '4'; compare with 4
-    je draw_square; if equal, jump to draw_square
+    je draw_oval; if equal, jump to draw_square
     cmp al, '5'; compare with 5
     je draw_triangle; if equal, jump to draw_triangle
     cmp al, '6'; compare with 6
@@ -177,7 +183,83 @@ circle_next:
     
     jmp main_loop
 
-draw_square:
+draw_oval:
+    ; Set y = -oval_height
+    mov ecx, oval_height
+    neg ecx           ; y = -oval_height
+
+oval_y_loop:
+    push ecx          ; save y on stack for later use
+
+    mov ecx, oval_width
+    neg ecx           ; x = -oval_width
+
+oval_x_loop:
+    push ecx          ; save x
+
+    ; Calculate (x / oval_width)^2 + (y / oval_height)^2 <= 1
+    ; To avoid floating point, use scaled integer math:
+    ; left = (x^2 * oval_height^2) + (y^2 * oval_width^2)
+    ; right = (oval_width^2) * (oval_height^2)
+
+    mov eax, [esp]    ; x
+    imul eax, eax     ; x^2
+
+    mov ebx, oval_height
+    imul ebx, oval_height  ; oval_height^2
+
+    imul eax, ebx     ; x^2 * oval_height^2
+
+    mov edx, [esp+4]  ; y (saved y, from previous push)
+    imul edx, edx     ; y^2
+
+    mov ebx, oval_width
+    imul ebx, oval_width   ; oval_width^2
+
+    imul edx, ebx     ; y^2 * oval_width^2
+
+    add eax, edx      ; sum of two terms
+
+    ; Calculate right side = (oval_width^2)*(oval_height^2)
+    mov ebx, oval_width
+    imul ebx, oval_width       ; oval_width^2
+    mov edx, oval_height
+    imul edx, oval_height      ; oval_height^2
+    imul ebx, edx              ; (oval_width^2)*(oval_height^2)
+
+    cmp eax, ebx
+    jg oval_print_space        ; if left > right, outside oval, print space
+
+oval_print_char:
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, fill_char
+    mov edx, 1
+    int 0x80
+    jmp oval_next_x
+
+oval_print_space:
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, space_char
+    mov edx, 1
+    int 0x80
+
+oval_next_x:
+    pop ecx          ; restore x
+    inc ecx          ; x++
+    cmp ecx, oval_width
+    jle oval_x_loop  ; loop x until x > oval_width
+
+    ; print newline
+    call print_newline
+
+    pop ecx          ; restore y
+    inc ecx          ; y++
+    cmp ecx, oval_height
+    jle oval_y_loop  ; loop y until y > oval_height
+
+    jmp main_loop    ; back to menu
     
 draw_triangle:
  
