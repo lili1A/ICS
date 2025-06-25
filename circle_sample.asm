@@ -52,7 +52,7 @@ section .data; program data initialization
 
 
 section .bss; declares initialized variables, reserves space in memory 
-    input_buffer resb 1; program reserves 1 byte (characters) for input
+    input_buffer resb 10; program reserves 10 byte (allows reading 9 characters + 1 null terminator) for input
 
 section .text; main instructions sety 
     global _start; begin execution 
@@ -74,35 +74,57 @@ main_loop:
     int 0x80
 
     ; Read input
-    mov eax, 3; syscall number to read 
-    mov ebx, 0; stdin - standart input 
-    mov ecx, input_buffer
-    mov edx, 1; defines how many bytes to read (maximum)
-    int 0x80
-
-    ; Check input
-    mov al, [input_buffer]; move only first character 
-    cmp al, '1'; compare with 1
-    je draw_line; if equal, jump to draw_line
-    cmp al, '2'; compare with 1
-    je draw_rectangle; compare with 2
-    cmp al, '3'; compare with 3
-    je draw_circle; if equal, jump to draw_circle
-    cmp al, '4'; compare with 4
-    je draw_oval; if equal, jump to draw_oval
-    cmp al, '5'; compare with 5
-    je draw_triangle; if equal, jump to draw_triangle
-    cmp al, '6'; compare with 6
-    je program_done; if equal, jump to program_done
+    mov eax, 3; sys_read
+    mov ebx, 0; stdin
+    mov ecx, input_buffer; buffer wher einput is stored
+    mov edx, 10; read up to 10 bytes
+    int 0x80; syscall 
     
-
-    ; invalid input
+    ; validating input: first charavter (must be 1-6)
+    mov al, [input_buffer]; loads first character 
+    cmp al, '1'; compare with 1 
+    jb invalid_input; if below 1 - jumb to invalid_input
+    cmp al, '6'; compare with 6
+    ja invalid_input; if above 6 - jump to invalid_input
+    
+    ; checking whether second character is \n or null
+    mov al, [input_buffer+1]; second character
+    cmp al, 10; compare with \n
+    je process_valid_input; valid if \n
+    cmp al, 0;compare with null
+    je process_valid_input; if null then valid
+    
+    ; other inputs are not allowed 
+    jmp invalid_input
+    
+process_valid_input:
+    ; Check input
+    mov al, [input_buffer]; 1st character 
+    cmp al, '1'; compare with 1
+    je draw_line; proceed to draw_line if 1 
+    cmp al, '2'; compare with 2
+    je draw_rectangle; proceed to draw_rectangle if 2
+    cmp al, '3'; compare with 3
+    je draw_circle; proceed to draw_rectangle if 3
+    cmp al, '4'; compare with 4
+    je draw_oval; proceed to draw_oval if 4
+    cmp al, '5'; compare with 5
+    je draw_triangle; proceed to draw_triangle if 5
+    cmp al, '6'; compare with 6
+    je program_done; proceed to program_done if 6
+    
+    ; in case of any other inputs, proceed to invalid_input
+    jmp invalid_input
+    
+invalid_input:
+    ; printing error message
     mov eax, 4
     mov ebx, 1
     mov ecx, invalid_msg
     mov edx, invalid_len
     int 0x80
-    jmp main_loop; jump back to the main loop in case of invalid input
+    jmp main_loop
+
 
 draw_line:
     ; === Draw indentation ===
