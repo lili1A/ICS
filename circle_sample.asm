@@ -24,8 +24,8 @@ section .data; program data initialization
     
     ; SHAPE PARAMETERS
     ; circle parameters
-    circle_radius equ 8
-    circle_y_scale equ 2       ; terminal character compensation
+    circle_radius equ 15
+    circle_y_scale equ 5       ; terminal character compensation
  
     
     ; LINE PARAMETERS 
@@ -52,7 +52,7 @@ section .data; program data initialization
 
 
 section .bss; declares initialized variables, reserves space in memory 
-    input_buffer resb 10; program reserves 10 bytes (characters) for input
+    input_buffer resb 1; program reserves 1 byte (characters) for input
 
 section .text; main instructions sety 
     global _start; begin execution 
@@ -77,7 +77,7 @@ main_loop:
     mov eax, 3; syscall number to read 
     mov ebx, 0; stdin - standart input 
     mov ecx, input_buffer
-    mov edx, 10; defines how many bytes to read (maximum)
+    mov edx, 1; defines how many bytes to read (maximum)
     int 0x80
 
     ; Check input
