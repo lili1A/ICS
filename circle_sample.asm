@@ -24,8 +24,8 @@ section .data; program data initialization
     
     ; SHAPE PARAMETERS
     ; circle parameters
-    circle_radius equ 12       ; Best for smoothness (8-16)
-    circle_y_scale equ 2       ; Terminal character compensation
+    circle_radius equ 8
+    circle_y_scale equ 2       ; terminal character compensation
  
     
     ; LINE PARAMETERS 
@@ -41,6 +41,15 @@ section .data; program data initialization
     ; Triangle parameters 
     triangle_height equ 10      ; height of triangle
     triangle_base equ 19        ; base width 
+    
+    ; Rectangle parameters
+    rectangle_height equ 6     ; total rows (including top & bottom)
+    rectangle_width  equ 20    ; total columns (including sides)
+    plus_char   db '+'
+    dash_char   db '-'
+    pipe_char   db '|'
+    newline     db 10
+
 
 section .bss; declares initialized variables, reserves space in memory 
     input_buffer resb 10; program reserves 10 bytes (characters) for input
@@ -80,11 +89,11 @@ main_loop:
     cmp al, '3'; compare with 3
     je draw_circle; if equal, jump to draw_circle
     cmp al, '4'; compare with 4
-    je draw_oval; if equal, jump to draw_square
+    je draw_oval; if equal, jump to draw_oval
     cmp al, '5'; compare with 5
     je draw_triangle; if equal, jump to draw_triangle
     cmp al, '6'; compare with 6
-    je program_done; if equal, jump to draw_triangle
+    je program_done; if equal, jump to program_done
     
 
     ; invalid input
@@ -128,6 +137,91 @@ draw_line_loop:
     jmp main_loop          ; return to menu
 
 draw_rectangle:
+    mov ecx, 0              ; Initialize row counter to 0
+
+rectangle_loop:
+    push ecx                ; Save current row counter
+
+    ; Check if first or last row (border rows)
+    cmp ecx, 0
+    je draw_border_row
+    mov eax, rectangle_height
+    dec eax
+    cmp ecx, eax
+    je draw_border_row
+
+    ; ===== Draw middle row =====
+    ; Print left border
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, pipe_char
+    mov edx, 1
+    int 0x80
+
+    ; Print spaces (width - 2)
+    mov esi, rectangle_width
+    sub esi, 2              ; Subtract 2 for the borders
+.draw_space:
+    push esi                ; Save space counter
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, space_char
+    mov edx, 1
+    int 0x80
+    pop esi                 ; Restore space counter
+    dec esi
+    jnz .draw_space
+
+    ; Print right border
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, pipe_char
+    mov edx, 1
+    int 0x80
+
+    jmp next_row            ; Skip border drawing
+
+draw_border_row:
+    ; ===== Draw top/bottom border row =====
+    ; Print left corner
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, plus_char
+    mov edx, 1
+    int 0x80
+
+    ; Print dashes (width - 2)
+    mov esi, rectangle_width
+    sub esi, 2
+.draw_dash:
+    push esi
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, dash_char
+    mov edx, 1
+    int 0x80
+    pop esi
+    dec esi
+    jnz .draw_dash
+
+    ; Print right corner
+    mov eax, 4
+    mov ebx, 1
+    mov ecx, plus_char
+    mov edx, 1
+    int 0x80
+
+next_row:
+    ; Print newline after each row
+    call print_newline
+
+    ; Move to next row
+    pop ecx                 ; Restore row counter
+    inc ecx                 ; Increment row counter
+    cmp ecx, rectangle_height
+    jl rectangle_loop       ; Continue if more rows to draw
+
+    jmp main_loop           ; Return to main menu
 
 draw_circle:
     mov ecx, circle_radius
@@ -185,6 +279,7 @@ circle_next:
     jle circle_y_loop
     
     jmp main_loop
+    
 
 draw_oval:
     ; Set y = -oval_height
@@ -356,6 +451,3 @@ program_done:
     mov eax, 1; syscall exit 
     xor ebx, ebx; exit code 0
     int 0x80; call kernel
-
-section .data
-    newline db 10
