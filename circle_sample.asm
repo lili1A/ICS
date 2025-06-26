@@ -67,10 +67,10 @@ _start:
     
 main_loop:
     ; main loop for prompt 
-    mov eax, 4
-    mov ebx, 1
-    mov ecx, prompt
-    mov edx, prompt_len
+    mov eax, 4; Accumulator (return values, arithmetic)
+    mov ebx, 1; Base (memory addressing)
+    mov ecx, prompt; Counter (loop control)
+    mov edx, prompt_len; Data (I/O, extended arithmetic)
     int 0x80
 
     ; read input
@@ -81,7 +81,7 @@ main_loop:
     int 0x80; syscall 
     
     ; validating input: first charavter (must be 1-6)
-    mov al, [input_buffer]; loads first character 
+    mov al, [input_buffer]; loads first character, Accumulator Low - for 8-bit operations.
     cmp al, '1'; compare with 1 
     jb invalid_input; if below 1 - jumb to invalid_input
     cmp al, '6'; compare with 6
