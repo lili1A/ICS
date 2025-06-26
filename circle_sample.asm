@@ -1,4 +1,4 @@
-section .data; program data initialization 
+section .data; program data initialization: strings and parameters 
     welcome_msg db "Welcome to the ICS assignment program of the group 15", 10; 10 - ASCII for \n - moves the cursor to the next line when printing 
     welcome_len equ $ - welcome_msg; equ - defines a constant value, $ - current address in memory
     ; user prompts
@@ -52,9 +52,9 @@ section .data; program data initialization
 
 
 section .bss; declares initialized variables, reserves space in memory 
-    input_buffer resb 10; program reserves 10 byte (allows reading 9 characters + 1 null terminator) for input
+    input_buffer resb 2; program reserves 2 bytes (allows reading 1 character + 1 \n) for input
 
-section .text; main instructions sety 
+section .text; main instructions set
     global _start; begin execution 
 
 _start:
@@ -73,11 +73,11 @@ main_loop:
     mov edx, prompt_len
     int 0x80
 
-    ; Read input
+    ; read input
     mov eax, 3; sys_read
     mov ebx, 0; stdin
     mov ecx, input_buffer; buffer wher einput is stored
-    mov edx, 10; read up to 10 bytes
+    mov edx, 2; read up to 2 bytes
     int 0x80; syscall 
     
     ; validating input: first charavter (must be 1-6)
@@ -118,12 +118,25 @@ process_valid_input:
     
 invalid_input:
     ; printing error message
-    mov eax, 4
-    mov ebx, 1
-    mov ecx, invalid_msg
-    mov edx, invalid_len
-    int 0x80
-    jmp main_loop
+    mov eax, 4; write 
+    mov ebx, 1; stdout 
+    mov ecx, invalid_msg; load adress 
+    mov edx, invalid_len; load length
+    int 0x80; call kernel
+    call flush_input     ; discard remaining user input to ensure clean input buffer for next read
+    jmp main_loop; re-display main menu after invalid input
+
+flush_input:
+    ; read and discard characters until newline (0x0A)
+.flush_loop: ;local labels
+    mov eax, 3; syscall read
+    mov ebx, 0; stdin
+    mov ecx, input_buffer; loads address of input_buffer
+    mov edx, 1; read 1 byte
+    int 0x80; executes the read syscall, reading a single character into input_buffer.
+    cmp byte [input_buffer], 0x0A; compares the byte in input_buffer with 0x0A
+    jne .flush_loop;  jump if not equal, keep looping until newline
+    ret; return from procedure, returns to the caller (invalid_input) once the newline is found
 
 
 draw_line:
@@ -246,63 +259,69 @@ next_row:
     jmp main_loop           ; Return to main menu
 
 draw_circle:
-    mov ecx, circle_radius
-    neg ecx                   ; start from -radius
+; circle equation: x² + (y² * scaling) ≤ r² - r
+; scaling compensates for terminal characters being taller than they are wide
+    mov ecx, circle_radius; radius constant 
+    neg ecx; start from -radius
     
 circle_y_loop:
-    push ecx                  ; save y 
+    push ecx; save y coordinate
     mov ecx, circle_radius
-    neg ecx                   ; start x from -radius
+    neg ecx; start x from -radius
+    ; mov ecx, circle_radius + neg ecx: resets x to -radius (to scan each row from left to right)
     
 circle_x_loop:
-    push ecx                  ; save x 
+    push ecx; save x coordinate
     
-    mov eax, ecx              ; x
-    imul eax, eax             ; x²
+    mov eax, ecx; x
+    imul eax, eax; x²
     
-    mov ebx, [esp+4]          ; y
-    imul ebx, ebx             ; y²
-    imul ebx, circle_y_scale  ; y² * scaling factor
+    mov ebx, [esp+4]; y
+    imul ebx, ebx; y²
+    imul ebx, circle_y_scale; y² * scaling factor
     
-    add eax, ebx              ; x² + (scaled y²)
+    add eax, ebx; x² + (scaled y²)
     
+    ; calculate adjusted radius 
     mov ebx, circle_radius
-    imul ebx, ebx             ; r²
-    sub ebx, circle_radius    ; adjustment
+    imul ebx, ebx; r²
+    sub ebx, circle_radius; adjustment for better shape (r² - r)
     
-    cmp eax, ebx
-    jg circle_space
+    cmp eax, ebx;  ; compare x² + (scaled y²) with r² - r
+    jg circle_space; if >,then point is outside (print space)
     
-    ; pixel draw
+    ; pixel draw (*)
     mov eax, 4
     mov ebx, 1
     mov ecx, fill_char
     mov edx, 1
     int 0x80
-    jmp circle_next
+    jmp circle_next; skip printing space
     
+; outside circle space 
 circle_space:
     mov eax, 4
     mov ebx, 1
     mov ecx, space_char
-    mov edx, 1
+    mov edx, 1; print 1 character 
     int 0x80
-    
+; move to x coordinate
 circle_next:
-    pop ecx                   ; restore x
-    inc ecx
+    pop ecx; restore x from the stack
+    inc ecx; x++ - move to the next column 
     cmp ecx, circle_radius
-    jle circle_x_loop
+    jle circle_x_loop; loop untill x > radius 
     
-    call print_newline
-    pop ecx                   ; restore y
-    inc ecx
+; move to your coordinate (newline)
+    call print_newline; move to the next line 
+    pop ecx; restore y coordinate from the stack
+    inc ecx; y++ - move the next row
     cmp ecx, circle_radius
-    jle circle_y_loop
-    
+    jle circle_y_loop; loop until y > radius
+   
+   ; return to the main menu after drawing  
     jmp main_loop
     
-
 draw_oval:
     ; Set y = -oval_height
     mov ecx, oval_height
